@@ -26,3 +26,8 @@ file_io/*
 !file_io/*.py
 ui/*
 !ui/*.py
+
+# Allow decks/ folder but ignore personal deck files
+!decks/
+decks/*
+!decks/.gitkeep
