@@ -1,0 +1,28 @@
+# Whitelist approach: ignore everything, then explicitly allow what we want.
+
+# Ignore everything
+*
+
+# Allow directories (needed so Git can descend into them)
+!models/
+!file_io/
+!ui/
+
+# Allow Python source files
+!*.py
+
+# Allow top-level tracked files
+!README.md
+!LICENSE
+!requirements.txt
+!run.sh
+!run.bat
+!.gitignore
+
+# Within allowed directories, allow only Python files
+models/*
+!models/*.py
+file_io/*
+!file_io/*.py
+ui/*
+!ui/*.py
