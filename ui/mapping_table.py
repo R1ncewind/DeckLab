@@ -820,7 +820,105 @@ class MappingTable(QTableWidget):
             act.triggered.connect(lambda checked=False, rs=rows_desc: [self.remove_sb_candidate(r) for r in rs])
             menu.addAction(act)
 
+        if maindeck_rows or sb_rows:
+            menu.addSeparator()
+            act = QAction("Swap one card", self)
+            act.triggered.connect(lambda checked=False: self._swap_cards(1))
+            menu.addAction(act)
+            act = QAction("Swap all cards", self)
+            act.triggered.connect(lambda checked=False: self._swap_cards(None))
+            menu.addAction(act)
+
         menu.exec(self.viewport().mapToGlobal(pos))
+
+    def _move_maindeck_to_sb(self, card_name: str, n: int) -> None:
+        state = self._state
+
+        cand = next((c for c in state.sb_candidates if c.name == card_name), None)
+        if cand is None:
+            state.sb_candidates.append(SBCandidate(name=card_name, count=0))
+            state.sb_checks[card_name] = {m: 0 for m in state.matchups}
+            cand = state.sb_candidates[-1]
+        cand.count += n
+        for m in state.matchups:
+            board_out = state.board_outs.get(card_name, {}).get(m, 0)
+            state.sb_checks[card_name][m] = (
+                state.sb_checks[card_name].get(m, 0) + max(0, n - board_out)
+            )
+
+        md_card = next((c for c in state.maindeck if c.name == card_name), None)
+        if md_card is None:
+            return
+        md_card.count -= n
+        if md_card.count <= 0:
+            state.maindeck = [c for c in state.maindeck if c.name != card_name]
+            state.board_outs.pop(card_name, None)
+            if card_name in state.hidden_cards:
+                state.hidden_cards.remove(card_name)
+        else:
+            for m in state.matchups:
+                old = state.board_outs.get(card_name, {}).get(m, 0)
+                state.board_outs.setdefault(card_name, {})[m] = max(0, old - n)
+
+    def _move_sb_to_maindeck(self, card_name: str, n: int) -> None:
+        state = self._state
+
+        md_card = next((c for c in state.maindeck if c.name == card_name), None)
+        if md_card is None:
+            state.maindeck.append(Card(name=card_name, count=0))
+            state.board_outs[card_name] = {m: 0 for m in state.matchups}
+            md_card = state.maindeck[-1]
+        md_card.count += n
+        for m in state.matchups:
+            sb_in = state.sb_checks.get(card_name, {}).get(m, 0)
+            to_board_out = max(0, n - sb_in)
+            if to_board_out > 0:
+                state.board_outs.setdefault(card_name, {})[m] = (
+                    state.board_outs.get(card_name, {}).get(m, 0) + to_board_out
+                )
+
+        cand = next((c for c in state.sb_candidates if c.name == card_name), None)
+        if cand is None:
+            return
+        cand.count -= n
+        if cand.count <= 0:
+            state.sb_candidates = [c for c in state.sb_candidates if c.name != card_name]
+            state.sb_checks.pop(card_name, None)
+        else:
+            for m in state.matchups:
+                old = state.sb_checks.get(card_name, {}).get(m, 0)
+                state.sb_checks[card_name][m] = max(0, old - n)
+
+    def _swap_cards(self, n_per_row: int | None) -> None:
+        selected_rows = {idx.row() for idx in self.selectionModel().selectedIndexes()}
+        add_md_row = self._add_maindeck_row()
+        sb_start   = self._sb_start_row()
+        add_sb     = self._add_sb_row()
+        visible    = self._visible_maindeck()
+
+        md_ops: list[tuple[str, int]] = []
+        for r in sorted(r for r in selected_rows if 0 <= r < add_md_row):
+            if r < len(visible):
+                card = visible[r]
+                n = min(n_per_row, card.count) if n_per_row is not None else card.count
+                if n > 0:
+                    md_ops.append((card.name, n))
+
+        sb_ops: list[tuple[str, int]] = []
+        for r in sorted(r for r in selected_rows if sb_start <= r < add_sb):
+            sb_idx = r - sb_start
+            if sb_idx < len(self._state.sb_candidates):
+                cand = self._state.sb_candidates[sb_idx]
+                n = min(n_per_row, cand.count) if n_per_row is not None else cand.count
+                if n > 0:
+                    sb_ops.append((cand.name, n))
+
+        for name, n in md_ops:
+            self._move_maindeck_to_sb(name, n)
+        for name, n in sb_ops:
+            self._move_sb_to_maindeck(name, n)
+
+        self._rebuild()
 
     def _show_header_context_menu(self, pos) -> None:
         logical_index = self.horizontalHeader().logicalIndexAt(pos)
