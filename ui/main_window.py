@@ -20,6 +20,9 @@ from file_io.mapping_file import (
 from ui.mapping_table import MappingTable
 from ui.export_image import render_guide_image
 
+_DECKS_DIR = Path(__file__).resolve().parent.parent / "decks"
+_DECKS_DIR.mkdir(exist_ok=True)
+
 
 class UnhideCardsDialog(QDialog):
     def __init__(self, hidden_cards: list[str], parent=None):
@@ -230,7 +233,7 @@ class MainWindow(QMainWindow):
 
     def _load_decklist_file(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Open Decklist", "", "Text Files (*.txt);;All Files (*)"
+            self, "Open Decklist", str(_DECKS_DIR), "Text Files (*.txt);;All Files (*)"
         )
         if not path:
             return
@@ -297,7 +300,7 @@ class MainWindow(QMainWindow):
     def _save_mapping_as(self) -> None:
         state = self._table.get_state()
         suggested = state.name.replace(" ", "_") + ".json" if state.name else ""
-        start_dir = str(Path(self._mapping_path).parent) if self._mapping_path else ""
+        start_dir = str(Path(self._mapping_path).parent) if self._mapping_path else str(_DECKS_DIR)
         path, _ = QFileDialog.getSaveFileName(
             self, "Save Mapping As", str(Path(start_dir) / suggested),
             "JSON Files (*.json);;All Files (*)"
@@ -315,7 +318,7 @@ class MainWindow(QMainWindow):
 
     def _load_mapping(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Load Mapping", "", "JSON Files (*.json);;All Files (*)"
+            self, "Load Mapping", str(_DECKS_DIR), "JSON Files (*.json);;All Files (*)"
         )
         if not path:
             return
@@ -403,7 +406,7 @@ class MainWindow(QMainWindow):
             return
         state = self._table.get_state()
         suggested = state.name.replace(" ", "_") + ".png" if state.name else ""
-        start_dir = str(Path(self._mapping_path).parent) if self._mapping_path else ""
+        start_dir = str(Path(self._mapping_path).parent) if self._mapping_path else str(_DECKS_DIR)
         path, _ = QFileDialog.getSaveFileName(
             self, "Export Guide as New PNG", str(Path(start_dir) / suggested),
             "PNG Images (*.png);;All Files (*)"
@@ -448,7 +451,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "No Matchups", "There are no matchups to export.")
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Matchups", "", "Text Files (*.txt);;All Files (*)"
+            self, "Export Matchups", str(_DECKS_DIR), "Text Files (*.txt);;All Files (*)"
         )
         if not path:
             return
@@ -460,7 +463,7 @@ class MainWindow(QMainWindow):
 
     def _load_matchups_file(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Load Matchups", "", "Text Files (*.txt);;All Files (*)"
+            self, "Load Matchups", str(_DECKS_DIR), "Text Files (*.txt);;All Files (*)"
         )
         if not path:
             return
@@ -535,7 +538,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Empty Decklist", "No maindeck cards to export.")
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Decklist", "", "Text Files (*.txt);;All Files (*)"
+            self, "Export Decklist", str(_DECKS_DIR), "Text Files (*.txt);;All Files (*)"
         )
         if not path:
             return
